@@ -115,11 +115,13 @@ def test_authenticate_basic(requests_mock):
     assert conn.auth.bearer == "w3lc0m3"
 
 
-def test_authenticate_oidc(oidc_test_setup):
+def test_authenticate_oidc(oidc_auth_code_pkce_flow_test_setup):
     # see test/rest/conftest.py for `oidc_test_setup` fixture
     client_id = "myclient"
     oidc_discovery_url = "https://oeo.net/credentials/oidc"
-    state, webbrowser_open = oidc_test_setup(client_id=client_id, oidc_discovery_url=oidc_discovery_url)
+    state, webbrowser_open = oidc_auth_code_pkce_flow_test_setup(
+        client_id=client_id, oidc_discovery_url=oidc_discovery_url
+    )
 
     # With all this set up, kick off the openid connect flow
     conn = Connection(API_URL)

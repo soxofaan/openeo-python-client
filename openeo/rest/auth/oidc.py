@@ -4,6 +4,8 @@ OpenID Connect related functionality and helpers.
 """
 
 import base64
+from pathlib import Path
+
 import functools
 import hashlib
 import http.server
@@ -18,7 +20,7 @@ import warnings
 import webbrowser
 from collections import namedtuple
 from queue import Queue, Empty
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Union
 
 import requests
 
@@ -159,8 +161,88 @@ class OAuthException(RuntimeError):
     pass
 
 
+AccessTokenResult = namedtuple(
+    typename="AccessTokenResult",
+    field_names=["access_token", "id_token", "refresh_token"]
+)
+
+
 class OidcAuthenticator:
-    pass
+    """
+    Base class for OpenID Connect authentication flows.
+    """
+
+    def __init__(self, client_id: str, oidc_discovery_url: str):
+        self._client_id = client_id
+        self._provider_info = requests.get(oidc_discovery_url).json()
+
+    def get_tokens(self) -> AccessTokenResult:
+        raise NotImplementedError
+
+    @staticmethod
+    def _extract_token_from_token_response(result: dict, key: str, expected_nonce: str = None) -> str:
+        """
+        Extract token of given type ("access_token", "id_token", "refresh_token") from given token response
+        """
+        try:
+            token = result[key]
+        except KeyError:
+            raise OAuthException("No {k} in response".format(k=key))
+        if expected_nonce:
+            # TODO: verify the JWT properly?
+            _, payload = jwt_decode(token)
+            if payload['nonce'] != expected_nonce:
+                raise OAuthException("Invalid nonce in {k}".format(k=key))
+        return token
+
+
+class OidcClientCredentialsAuthenticator(OidcAuthenticator):
+    """
+    Implementation of OpenID Connect authentication using the OAuth Client Credentials Flow.
+
+    This flow is recommended for use cases where there is no interactive user context, like
+    background/batch jobs. The flow requires a secret, so it is necessary that the code
+    using this flow has the capability to maintain a secret
+    (e.g. through storing the secret in a separate file that is not shared with the source code).
+    """
+
+    def __init__(self, client_id: str, oidc_discovery_url: str, client_secret: str):
+        super().__init__(client_id=client_id, oidc_discovery_url=oidc_discovery_url)
+        self._client_secret = client_secret
+
+    def get_tokens(self) -> AccessTokenResult:
+        token_endpoint = self._provider_info['token_endpoint']
+        log.info("Getting access token with client credentials at {u}".format(u=token_endpoint))
+        token_response = requests.post(
+            url=token_endpoint,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": self._client_id,
+                "client_secret": self._client_secret
+            },
+        )
+        token_response.raise_for_status()
+
+        result = token_response.json()
+        log.debug("Token response with keys {k}".format(k=result.keys()))
+
+        return AccessTokenResult(
+            access_token=self._extract_token_from_token_response(result, "access_token"),
+            # TODO: is id_token guaranteed in this flow?
+            id_token=self._extract_token_from_token_response(result, "id_token"),
+            refresh_token=self._extract_token_from_token_response(result, "refresh_token")
+        )
+
+    @classmethod
+    def from_json_file(cls, filename: Union[str, Path], oidc_discovery_url: str):
+        """Factory to create OidcClientCredentialsAuthenticator from JSON file containing client id/secret"""
+        with Path(filename).open(encoding="utf-8") as f:
+            data = json.load(f)
+            return cls(
+                client_id=data["client_id"],
+                oidc_discovery_url=oidc_discovery_url,
+                client_secret=data["client_secret"]
+            )
 
 
 class OidcAuthCodePkceAuthenticator(OidcAuthenticator):
@@ -184,11 +266,9 @@ class OidcAuthCodePkceAuthenticator(OidcAuthenticator):
     """
 
     AuthCodeResult = namedtuple("AuthCodeResult", ["auth_code", "nonce", "code_verifier", "redirect_uri"])
-    AccessTokenResult = namedtuple("AccessTokenResult", ["access_token", "id_token", "refresh_token"])
 
     def __init__(self, client_id: str, oidc_discovery_url: str, webbrowser_open: Callable = None, timeout=120):
-        self._client_id = client_id
-        self._provider_info = requests.get(oidc_discovery_url).json()
+        super().__init__(client_id=client_id, oidc_discovery_url=oidc_discovery_url)
         self._webbrowser_open = webbrowser_open or webbrowser.open
         self._authentication_timeout = timeout
 
@@ -303,24 +383,13 @@ class OidcAuthCodePkceAuthenticator(OidcAuthenticator):
         result = token_response.json()
         log.debug("Token response with keys {k}".format(k=result.keys()))
 
-        def extract_token(key):
-            try:
-                token = result[key]
-            except KeyError:
-                raise OAuthException("No {k} in response".format(k=key))
-            # TODO: verify the JWT properly?
-            _, payload = jwt_decode(token)
-            if payload['nonce'] != auth_code_result.nonce:
-                raise OAuthException("Invalid nonce in {k}".format(k=key))
-            return token
-
-        access_token = extract_token("access_token")
-        id_token = extract_token("id_token")
-        refresh_token = extract_token("refresh_token")
-        return self.AccessTokenResult(
-            access_token=access_token,
-            id_token=id_token,
-            refresh_token=refresh_token
+        return AccessTokenResult(
+            access_token=self._extract_token_from_token_response(
+                result, "access_token", expected_nonce=auth_code_result.nonce),
+            id_token=self._extract_token_from_token_response(
+                result, "id_token", expected_nonce=auth_code_result.nonce),
+            refresh_token=self._extract_token_from_token_response(
+                result, "refresh_token", expected_nonce=auth_code_result.nonce)
         )
 
 

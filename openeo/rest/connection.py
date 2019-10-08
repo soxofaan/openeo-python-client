@@ -16,6 +16,7 @@ import openeo
 from openeo.capabilities import Capabilities
 from openeo.imagecollection import CollectionMetadata
 from openeo.rest.auth.auth import NullAuth, BearerAuth
+from openeo.rest.auth.oidc import OidcClientCredentialsAuthenticator, OidcAuthCodePkceAuthenticator
 from openeo.rest.imagecollectionclient import ImageCollectionClient
 from openeo.rest.job import RESTJob
 from openeo.rest.rest_capabilities import RESTCapabilities
@@ -172,7 +173,8 @@ class Connection(RestApiConnection):
         self.auth = BearerAuth(bearer=resp["access_token"])
         return self
 
-    def authenticate_OIDC(self, client_id: str, webbrowser_open=None, timeout=120) -> 'Connection':
+    def authenticate_OIDC(self, client_id: str, client_secret: str = None, client_secret_json: str = None,
+                          webbrowser_open=None, timeout=120) -> 'Connection':
         """
         Authenticates a user to the backend using OpenID Connect.
 
@@ -181,17 +183,28 @@ class Connection(RestApiConnection):
             (opens a webbrowser by default)
         :param timeout: number of seconds after which to abort the authentication procedure
         """
-        # Local import to avoid importing the whole OpenID Connect dependency chain. TODO: just do global import?
-        from openeo.rest.auth.oidc import OidcAuthCodePkceAuthenticator
 
         # Per spec: '/credentials/oidc' will redirect to  OpenID Connect discovery document
         oidc_discovery_url = self.build_url('/credentials/oidc')
-        authenticator = OidcAuthCodePkceAuthenticator(
-            client_id=client_id,
-            oidc_discovery_url=oidc_discovery_url,
-            webbrowser_open=webbrowser_open,
-            timeout=timeout,
-        )
+
+        if client_secret:
+            authenticator = OidcClientCredentialsAuthenticator(
+                client_id=client_id,
+                oidc_discovery_url=oidc_discovery_url,
+                client_secret=client_secret
+            )
+        elif client_secret_json:
+            authenticator = OidcClientCredentialsAuthenticator.from_json_file(
+                filename=client_secret_json,
+                oidc_discovery_url=oidc_discovery_url
+            )
+        else:
+            authenticator = OidcAuthCodePkceAuthenticator(
+                client_id=client_id,
+                oidc_discovery_url=oidc_discovery_url,
+                webbrowser_open=webbrowser_open,
+                timeout=timeout
+            )
         # Do the Oauth/OpenID Connect flow and use the access token as bearer token.
         tokens = authenticator.get_tokens()
         # TODO: ability to refresh the token when expired?

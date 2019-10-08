@@ -1,9 +1,11 @@
+import json
 from io import BytesIO
 from queue import Queue
 
 import requests
 
-from openeo.rest.auth.oidc import QueuingRequestHandler, drain_queue, HttpServerThread, OidcAuthCodePkceAuthenticator
+from openeo.rest.auth.oidc import QueuingRequestHandler, drain_queue, HttpServerThread, OidcAuthCodePkceAuthenticator, \
+    OidcClientCredentialsAuthenticator
 
 
 def handle_request(handler_class, path: str):
@@ -50,11 +52,13 @@ def test_http_server_thread():
     server_thread.join()
 
 
-def test_oidc_flow(oidc_test_setup):
-    # see test/rest/conftest.py for `oidc_test_setup` fixture
+def test_oidc_auth_code_pkce_flow(oidc_auth_code_pkce_flow_test_setup):
+    # see test/rest/conftest.py for oidc test setup fixture
     client_id = "myclient"
     oidc_discovery_url = "http://oidc.example.com/.well-known/openid-configuration"
-    state, webbrowser_open = oidc_test_setup(client_id=client_id, oidc_discovery_url=oidc_discovery_url)
+    state, webbrowser_open = oidc_auth_code_pkce_flow_test_setup(
+        client_id=client_id, oidc_discovery_url=oidc_discovery_url
+    )
 
     authenticator = OidcAuthCodePkceAuthenticator(
         client_id=client_id,
@@ -62,5 +66,42 @@ def test_oidc_flow(oidc_test_setup):
         webbrowser_open=webbrowser_open
     )
     # Do the Oauth/OpenID Connect flow
+    tokens = authenticator.get_tokens()
+    assert state["access_token"] == tokens.access_token
+
+
+def test_oidc_client_credentials_flow(oidc_client_credentials_test_setup):
+    client_id = "myclient"
+    oidc_discovery_url = "http://oidc.example.com/.well-known/openid-configuration"
+    client_secret = "$3cr3t"
+    state = oidc_client_credentials_test_setup(
+        client_id=client_id, oidc_discovery_url=oidc_discovery_url
+    )
+
+    authenticator = OidcClientCredentialsAuthenticator(
+        client_id=client_id,
+        oidc_discovery_url=oidc_discovery_url,
+        client_secret=client_secret
+    )
+    tokens = authenticator.get_tokens()
+    assert state["access_token"] == tokens.access_token
+
+
+def test_oidc_client_credentials_flow_from_json_file(tmpdir, oidc_client_credentials_test_setup):
+    client_id = "myclient"
+    oidc_discovery_url = "http://oidc.example.com/.well-known/openid-configuration"
+    client_secret = "$3cr3t"
+
+    state = oidc_client_credentials_test_setup(
+        client_id=client_id, oidc_discovery_url=oidc_discovery_url
+    )
+    secrets = tmpdir.join("secrets.json")
+    with secrets.open('w') as f:
+        json.dump({"client_id": client_id, "client_secret": client_secret}, f)
+
+    authenticator = OidcClientCredentialsAuthenticator.from_json_file(
+        filename=str(secrets),
+        oidc_discovery_url=oidc_discovery_url,
+    )
     tokens = authenticator.get_tokens()
     assert state["access_token"] == tokens.access_token

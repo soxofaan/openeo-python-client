@@ -11,10 +11,10 @@ from openeo.rest.auth.oidc import OidcAuthCodePkceAuthenticator
 
 
 @pytest.fixture()
-def oidc_test_setup(requests_mock: requests_mock.Mocker):
+def oidc_auth_code_pkce_flow_test_setup(requests_mock: requests_mock.Mocker):
     """
     Fixture that generates a function to set up an environment
-    of mocked requests and request handlers to test OIDC flows
+    of mocked requests and request handlers to test OIDC Authorization Code with PKCE flows
     """
 
     def setup(oidc_discovery_url: str, client_id: str = "myclient") -> Tuple[dict, Callable]:
@@ -59,6 +59,43 @@ def oidc_test_setup(requests_mock: requests_mock.Mocker):
         requests_mock.post(token_endpoint, text=token_callback)
 
         return state, webbrowser_open
+
+    return setup
+
+
+@pytest.fixture()
+def oidc_client_credentials_test_setup(requests_mock: requests_mock.Mocker):
+    """
+    Fixture that generates a function to set up an environment
+    of mocked requests and request handlers to test OIDC Client Credentials flows
+    """
+
+    def setup(oidc_discovery_url: str, client_id: str = "myclient") -> dict:
+        # Simple state dict for cross-checking some values between the fake OIDC handling entities.
+        state = {}
+        token_endpoint = "https://auth.example.com/token"
+
+        def token_callback(request, context):
+            """Fake client_credentials request to Oauth Provider"""
+            params = _get_query_params(query=request.text)
+            assert params["client_id"] == client_id
+            assert params["grant_type"] == "client_credentials"
+            assert params["client_secret"] == "$3cr3t"
+            state["access_token"] = _jwt_encode({}, {"sub": "123", "name": "john"})
+            return json.dumps({
+                "access_token": state["access_token"],
+                # TODO: should id_token be included?
+                "id_token": _jwt_encode({}, {"sub": "123", "name": "john"}),
+                "refresh_token": _jwt_encode({}, {}),
+            })
+
+        requests_mock.get(oidc_discovery_url, text=json.dumps({
+            # Rudimentary OpenID Connect discovery document
+            "token_endpoint": token_endpoint,
+        }))
+        requests_mock.post(token_endpoint, text=token_callback)
+
+        return state
 
     return setup
 

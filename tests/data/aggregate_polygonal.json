@@ -25,13 +25,6 @@
       },
       "result": false
     },
-    "readvector1": {
-      "arguments": {
-        "filename":"/data/users/Public/vdboschj/EP-3025/GeometryCollection.geojson"
-      },
-      "process_id":"read_vector",
-      "result":false
-    },
     "aggregatepolygon1": {
       "process_id": "aggregate_polygon",
       "arguments": {
@@ -39,7 +32,37 @@
           "from_node": "filterbbox1"
         },
         "polygons": {
-          "from_node": "readvector1"
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                16.138916,
+                48.320647
+              ],
+              [
+                16.524124,
+                48.320647
+              ],
+              [
+                16.524124,
+                48.1386
+              ],
+              [
+                16.138916,
+                48.1386
+              ],
+              [
+                16.138916,
+                48.320647
+              ]
+            ]
+          ],
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          }
         },
         "reducer": {
           "callback": {
@@ -53,7 +76,9 @@
               "result": true
             }
           }
-        }
+        },
+        "name": "result",
+        "binary": false
       },
       "result": true
     }

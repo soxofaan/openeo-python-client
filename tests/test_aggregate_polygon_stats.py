@@ -31,7 +31,7 @@ class TestTimeSeries(TestCase):
 
 
         def check_process_graph(request):
-            expected_graph = load_json_resource('data/aggregate_zonal.json')
+            expected_graph = load_json_resource('data/aggregate_polygonal.json')
             assert request.json() == expected_graph
             return True
 
@@ -55,7 +55,7 @@ class TestTimeSeries(TestCase):
             .bbox_filter(west=3, east=6, north=52, south=50, crs='EPSG:4326')
 
         def check_process_graph(request):
-            expected_graph = load_json_resource('data/aggregate_zonal_vector_file.json')
+            expected_graph = load_json_resource('data/aggregate_polygonal_vector_file.json')
             assert request.json() == expected_graph
             return True
 

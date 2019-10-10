@@ -1,3 +1,4 @@
+import re
 import typing
 from typing import List, Dict, Union
 
@@ -19,10 +20,10 @@ class ImageCollectionClient(ImageCollection):
         Supports 0.4.
     """
 
-    def __init__(self, node_id: str, builder: GraphBuilder, session: 'Connection', metadata: CollectionMetadata=None):
+    def __init__(self, node_id: str, builder: GraphBuilder, session: 'Connection', metadata: CollectionMetadata = None):
         super().__init__(metadata=metadata)
         self.node_id = node_id
-        self.builder= builder
+        self.builder = builder
         self.session = session
         self.graph = builder.processes
         self.metadata = metadata
@@ -127,9 +128,9 @@ class ImageCollectionClient(ImageCollection):
 
         process_id = 'filter_bands'
         args = {
-                'data': {'from_node': self.node_id},
-                'bands': bands
-                }
+            'data': {'from_node': self.node_id},
+            'bands': bands
+        }
         return self.graph_add_process(process_id, args)
 
     def band(self, band: Union[str, int]) -> 'ImageCollection':
@@ -181,7 +182,7 @@ class ImageCollectionClient(ImageCollection):
                 return band_names.index(band)
         raise ValueError("Band {b!r} not available in collection. Valid names: {n!r}".format(b=band, n=band_names))
 
-    def subtract(self, other:Union[ImageCollection,Union[int,float]]):
+    def subtract(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Subtract other from this datacube, so the result is: this - other
         The number of bands in both data cubes has to be the same.
@@ -197,7 +198,7 @@ class ImageCollectionClient(ImageCollection):
         else:
             raise ValueError("Unsupported right-hand operand: " + str(other))
 
-    def divide(self, other:Union[ImageCollection,Union[int,float]]):
+    def divide(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Subtraction other from this datacube, so the result is: this - other
         The number of bands in both data cubes has to be the same.
@@ -213,7 +214,7 @@ class ImageCollectionClient(ImageCollection):
         else:
             raise ValueError("Unsupported right-hand operand: " + str(other))
 
-    def product(self, other:Union[ImageCollection,Union[int,float]]):
+    def product(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Multiply other with this datacube, so the result is: this * other
         The number of bands in both data cubes has to be the same.
@@ -235,7 +236,7 @@ class ImageCollectionClient(ImageCollection):
         :param other:
         :return ImageCollection: logical_or(this, other)
         """
-        return self._reduce_bands_binary(operator='or', other=other,arg_name='expressions')
+        return self._reduce_bands_binary(operator='or', other=other, arg_name='expressions')
 
     def logical_and(self, other: ImageCollection):
         """
@@ -243,7 +244,7 @@ class ImageCollectionClient(ImageCollection):
         :param other:
         :return ImageCollection: logical_and(this, other)
         """
-        return self._reduce_bands_binary(operator='and', other=other,arg_name='expressions')
+        return self._reduce_bands_binary(operator='and', other=other, arg_name='expressions')
 
     def __invert__(self):
         """
@@ -263,25 +264,23 @@ class ImageCollectionClient(ImageCollection):
             current_result = my_builder.find_result_node_id()
             new_builder = my_builder.copy()
             new_builder.processes[current_result]['result'] = False
-            new_builder.add_process(operator, expression={'from_node': current_result},  result=True)
+            new_builder.add_process(operator, expression={'from_node': current_result}, result=True)
 
         return self._create_reduced_collection(new_builder, extend_previous_callback_graph)
 
     def __ne__(self, other: Union[ImageCollection, Union[int, float]]):
         return self.__eq__(other).__invert__()
-    
-    
 
-    def __eq__(self, other:Union[ImageCollection,Union[int,float]]):
+    def __eq__(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Pixelwise comparison of this data cube with another cube or constant.
 
         :param other: Another data cube, or a constant
         :return:
         """
-        return self._reduce_bands_binary_xy('eq',other)
-    
-    def __gt__(self, other:Union[ImageCollection,Union[int,float]]):
+        return self._reduce_bands_binary_xy('eq', other)
+
+    def __gt__(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Pairwise comparison of the bands in this data cube with the bands in the 'other' data cube.
         The number of bands in both data cubes has to be the same.
@@ -289,9 +288,9 @@ class ImageCollectionClient(ImageCollection):
         :param other:
         :return ImageCollection: this + other
         """
-        return self._reduce_bands_binary_xy('gt',other)
-            
-    def __lt__(self, other:Union[ImageCollection,Union[int,float]]):
+        return self._reduce_bands_binary_xy('gt', other)
+
+    def __lt__(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Pairwise comparison of the bands in this data cube with the bands in the 'other' data cube.
         The number of bands in both data cubes has to be the same.
@@ -299,7 +298,7 @@ class ImageCollectionClient(ImageCollection):
         :param other:
         :return ImageCollection: this + other
         """
-        return self._reduce_bands_binary_xy('lt',other)
+        return self._reduce_bands_binary_xy('lt', other)
 
     def _create_reduced_collection(self, callback_graph_builder, extend_previous_callback_graph):
         if not extend_previous_callback_graph:
@@ -314,13 +313,14 @@ class ImageCollectionClient(ImageCollection):
             return self.graph_add_process("reduce", args)
         else:
             process_graph_copy = self.builder.copy()
-            process_graph_copy.processes[self.node_id]['arguments']['reducer']['callback'] = callback_graph_builder.processes
+            process_graph_copy.processes[self.node_id]['arguments']['reducer'][
+                'callback'] = callback_graph_builder.processes
 
             # now current_node should be a reduce node, let's modify it
             # TODO: set metadata of reduced cube?
             return ImageCollectionClient(self.node_id, process_graph_copy, self.session)
 
-    def __truediv__(self,other):
+    def __truediv__(self, other):
         return self.divide(other)
 
     def __sub__(self, other):
@@ -342,9 +342,9 @@ class ImageCollectionClient(ImageCollection):
         return self.logical_or(other)
 
     def __and__(self, other):
-        return  self.logical_and(other)
+        return self.logical_and(other)
 
-    def add(self, other:Union[ImageCollection,Union[int,float]]):
+    def add(self, other: Union[ImageCollection, Union[int, float]]):
         """
         Pairwise addition of the bands in this data cube with the bands in the 'other' data cube.
         The number of bands in both data cubes has to be the same.
@@ -360,7 +360,7 @@ class ImageCollectionClient(ImageCollection):
         else:
             raise ValueError("Unsupported right-hand operand: " + str(other))
 
-    def _reduce_bands_binary(self, operator, other: 'ImageCollectionClient',arg_name='data'):
+    def _reduce_bands_binary(self, operator, other: 'ImageCollectionClient', arg_name='data'):
         # first we create the callback
         fallback_node = {'from_argument': 'data'}
         my_builder = self._get_band_graph_builder()
@@ -389,14 +389,14 @@ class ImageCollectionClient(ImageCollection):
             # now current_node should be a reduce node, let's modify it
             # TODO: set metadata of reduced cube?
             return ImageCollectionClient(node_id, new_builder, reducing_graph.session)
-        
-    def _reduce_bands_binary_xy(self,operator,other:Union[ImageCollection,Union[int,float]]):
+
+    def _reduce_bands_binary_xy(self, operator, other: Union[ImageCollection, Union[int, float]]):
         """
         Pixelwise comparison of this data cube with another cube or constant.
 
         :param other: Another data cube, or a constant
         :return:
-        """        
+        """
         if isinstance(other, int) or isinstance(other, float):
             my_builder = self._get_band_graph_builder()
             new_builder = None
@@ -404,12 +404,12 @@ class ImageCollectionClient(ImageCollection):
             if not extend_previous_callback_graph:
                 new_builder = GraphBuilder()
                 # TODO merge both process graphs?
-                new_builder.add_process(operator, x={'from_argument': 'data'}, y = other, result=True)
+                new_builder.add_process(operator, x={'from_argument': 'data'}, y=other, result=True)
             else:
                 current_result = my_builder.find_result_node_id()
                 new_builder = my_builder.copy()
                 new_builder.processes[current_result]['result'] = False
-                new_builder.add_process(operator, x={'from_node': current_result}, y = other, result=True)
+                new_builder.add_process(operator, x={'from_node': current_result}, y=other, result=True)
 
             return self._create_reduced_collection(new_builder, extend_previous_callback_graph)
         elif isinstance(other, ImageCollection):
@@ -417,7 +417,7 @@ class ImageCollectionClient(ImageCollection):
         else:
             raise ValueError("Unsupported right-hand operand: " + str(other))
 
-    def _reduce_bands_binary_const(self, operator, other:Union[int,float]):
+    def _reduce_bands_binary_const(self, operator, other: Union[int, float]):
         my_builder = self._get_band_graph_builder()
         new_builder = None
         extend_previous_callback_graph = my_builder is not None
@@ -431,7 +431,7 @@ class ImageCollectionClient(ImageCollection):
             new_builder.processes[current_result]['result'] = False
             new_builder.add_process(operator, data=[{'from_node': current_result}, other], result=True)
 
-        return self._create_reduced_collection(new_builder,extend_previous_callback_graph)
+        return self._create_reduced_collection(new_builder, extend_previous_callback_graph)
 
     def _get_band_graph_builder(self):
         current_node = self.graph[self.node_id]
@@ -441,34 +441,7 @@ class ImageCollectionClient(ImageCollection):
                 return GraphBuilder(graph=callback_graph)
         return None
 
-    def zonal_statistics(self, regions, func, scale=1000, interval="day") -> 'ImageCollection':
-        """Calculates statistics for each zone specified in a file.
-            :param regions: GeoJSON or a path to a GeoJSON file containing the
-                            regions. For paths you must specify the path to a
-                            user-uploaded file without the user id in the path.
-            :param func: Statistical function to calculate for the specified
-                         zones. example values: min, max, mean, median, mode
-            :param scale: A nominal scale in meters of the projection to work
-                          in. Defaults to 1000.
-            :param interval: Interval to group the time series. Allowed values:
-                            day, wee, month, year. Defaults to day.
-            :return An ImageCollection instance
-        """
-        regions_geojson = regions
-        if isinstance(regions,Polygon) or isinstance(regions,MultiPolygon):
-            regions_geojson = mapping(regions)
-        process_id = 'zonal_statistics'
-        args = {
-                'data': {'from_node': self.node_id},
-                'regions': regions_geojson,
-                'func': func,
-                'scale': scale,
-                'interval': interval
-            }
-
-        return self.graph_add_process(process_id, args)
-
-    def apply_dimension(self, code: str, runtime=None, version="latest",dimension='temporal') -> 'ImageCollection':
+    def apply_dimension(self, code: str, runtime=None, version="latest", dimension='temporal') -> 'ImageCollection':
         """
         Applies an n-ary process (i.e. takes an array of pixel values instead of a single pixel value) to a raster data cube.
         In contrast, the process apply applies an unary process to all pixel values.
@@ -519,7 +492,7 @@ class ImageCollectionClient(ImageCollection):
         else:
             raise NotImplementedError("apply_dimension requires backend version >=0.4.0")
 
-    def apply_tiles(self, code: str,runtime="Python",version="latest") -> 'ImageCollection':
+    def apply_tiles(self, code: str, runtime="Python", version="latest") -> 'ImageCollection':
         """Apply a function to the given set of tiles in this image collection.
 
             This type applies a simple function to one pixel of the input image or image collection.
@@ -538,7 +511,7 @@ class ImageCollectionClient(ImageCollection):
                 'data': {
                     'from_node': self.node_id
                 },
-                'dimension': 'spectral_bands',#TODO determine dimension based on datacube metadata
+                'dimension': 'spectral_bands',  # TODO determine dimension based on datacube metadata
                 'binary': False,
                 'reducer': {
                     'callback': {
@@ -550,12 +523,12 @@ class ImageCollectionClient(ImageCollection):
 
             process_id = 'apply_tiles'
             args = {
-                    'data': {'from_node': self.node_id},
-                    'code':{
-                        'language':'python',
-                        'source':code
-                    }
+                'data': {'from_node': self.node_id},
+                'code': {
+                    'language': 'python',
+                    'source': code
                 }
+            }
 
         return self.graph_add_process(process_id, args)
 
@@ -574,8 +547,8 @@ class ImageCollectionClient(ImageCollection):
             "result": True
         }
 
-    #TODO better name, pull to ABC?
-    def reduce_tiles_over_time(self,code: str,runtime="Python",version="latest"):
+    # TODO better name, pull to ABC?
+    def reduce_tiles_over_time(self, code: str, runtime="Python", version="latest"):
         """
         Applies a user defined function to a timeseries of tiles. The size of the tile is backend specific, and can be limited to one pixel.
         The function should reduce the given timeseries into a single (multiband) tile.
@@ -591,7 +564,7 @@ class ImageCollectionClient(ImageCollection):
                 'data': {
                     'from_node': self.node_id
                 },
-                'dimension': 'temporal',#TODO determine dimension based on datacube metadata
+                'dimension': 'temporal',  # TODO determine dimension based on datacube metadata
                 'binary': False,
                 'reducer': {
                     'callback': {
@@ -603,7 +576,7 @@ class ImageCollectionClient(ImageCollection):
         else:
             raise NotImplementedError("apply_to_tiles_over_time requires backend version >=0.4.0")
 
-    def apply(self, process: str, data_argument='data',arguments={}) -> 'ImageCollection':
+    def apply(self, process: str, data_argument='data', arguments={}) -> 'ImageCollection':
         process_id = 'apply'
         arguments[data_argument] = \
             {
@@ -611,12 +584,12 @@ class ImageCollectionClient(ImageCollection):
             }
         args = {
             'data': {'from_node': self.node_id},
-            'process':{
-                'callback':{
-                    "unary":{
-                        "arguments":arguments,
-                        "process_id":process,
-                        "result":True
+            'process': {
+                'callback': {
+                    "unary": {
+                        "arguments": arguments,
+                        "process_id": process,
+                        "result": True
                     }
                 }
             }
@@ -624,7 +597,7 @@ class ImageCollectionClient(ImageCollection):
 
         return self.graph_add_process(process_id, args)
 
-    def _reduce_time(self, reduce_function = "max"):
+    def _reduce_time(self, reduce_function="max"):
         process_id = 'reduce'
 
         args = {
@@ -700,14 +673,14 @@ class ImageCollectionClient(ImageCollection):
         """
         process_id = 'stretch_colors'
         args = {
-                'data': {'from_node': self.node_id},
-                'min': min,
-                'max': max
-            }
+            'data': {'from_node': self.node_id},
+            'min': min,
+            'max': max
+        }
 
         return self.graph_add_process(process_id, args)
 
-    def mask(self, polygon: Union[Polygon, MultiPolygon]=None, srs="EPSG:4326", rastermask: 'ImageCollection'=None,
+    def mask(self, polygon: Union[Polygon, MultiPolygon] = None, srs="EPSG:4326", rastermask: 'ImageCollection' = None,
              replacement=None) -> 'ImageCollection':
         """
         Mask the image collection using either a polygon or a raster mask.
@@ -745,12 +718,12 @@ class ImageCollectionClient(ImageCollection):
             new_collection = self
         elif rastermask is not None:
             mask_node = rastermask.graph[rastermask.node_id]
-            mask_node['result']=True
+            mask_node['result'] = True
             new_collection = self._graph_merge(rastermask.graph)
-            #mask node id may have changed!
+            # mask node id may have changed!
             mask_id = new_collection.builder.find_result_node_id()
             mask_node = new_collection.graph[mask_id]
-            mask_node['result']=False
+            mask_node['result'] = False
             mask = {
                 'from_node': mask_id
             }
@@ -779,8 +752,8 @@ class ImageCollectionClient(ImageCollection):
         """
         return self.graph_add_process('apply_kernel', {
             'data': {'from_node': self.node_id},
-            'kernel':kernel.tolist(),
-            'factor':factor
+            'kernel': kernel.tolist(),
+            'factor': factor
         })
 
     ####VIEW methods #######
@@ -797,7 +770,7 @@ class ImageCollectionClient(ImageCollection):
         self.graph[self.node_id]['result'] = True
         return self.session.point_timeseries({"process_graph": self.graph}, x, y, srs)
 
-    def polygonal_mean_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> 'ImageCollection':
+    def polygonal_mean_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> dict:
         """
         Extract a mean time series for the given (multi)polygon. Its points are
         expected to be in the EPSG:4326 coordinate
@@ -807,9 +780,9 @@ class ImageCollectionClient(ImageCollection):
         :return: ImageCollection
         """
 
-        return self._polygonal_timeseries(polygon, "mean")
+        return self._aggregate_polygon(polygon, "mean")
 
-    def polygonal_histogram_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> Dict:
+    def polygonal_histogram_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> dict:
         """
         Extract a histogram time series for the given (multi)polygon. Its points are
         expected to be in the EPSG:4326 coordinate
@@ -819,9 +792,9 @@ class ImageCollectionClient(ImageCollection):
         :return: ImageCollection
         """
 
-        return self._polygonal_timeseries(polygon, "histogram")
+        return self._aggregate_polygon(polygon, "histogram")
 
-    def polygonal_median_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> Dict:
+    def polygonal_median_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> dict:
         """
         Extract a median time series for the given (multi)polygon. Its points are
         expected to be in the EPSG:4326 coordinate
@@ -831,9 +804,9 @@ class ImageCollectionClient(ImageCollection):
         :return: ImageCollection
         """
 
-        return self._polygonal_timeseries(polygon, "median")
+        return self._aggregate_polygon(polygon, "median")
 
-    def polygonal_standarddeviation_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> Dict:
+    def polygonal_standarddeviation_timeseries(self, polygon: Union[Polygon, MultiPolygon, str]) -> dict:
         """
         Extract a time series of standard deviations for the given (multi)polygon. Its points are
         expected to be in the EPSG:4326 coordinate
@@ -843,51 +816,20 @@ class ImageCollectionClient(ImageCollection):
         :return: ImageCollection
         """
 
-        return self._polygonal_timeseries(polygon, "sd")
+        return self._aggregate_polygon(polygon, "sd")
 
-    def _polygonal_timeseries(self, polygon: Union[Polygon, MultiPolygon, str], func: str) -> 'ImageCollection':
-        def graph_add_aggregate_process(graph) -> 'ImageCollection':
-            process_id = 'aggregate_zonal'
-            if self._api_version.at_least('0.4.0'):
-                process_id = 'aggregate_polygon'
-
-            args = {
-                'data': {'from_node': self.node_id},
-                'dimension': 'temporal',
-                'polygons': polygons
-            }
-            if self._api_version.at_least('0.4.0'):
-                del args['dimension']
-                args['reducer'] = {
-                    'callback': {
-                        "unary": {
-                            "arguments": {
-                                "data": {
-                                    "from_argument": "data"
-                                }
-                            },
-                            "process_id": func,
-                            "result": True
-                        }
-                    }
-                }
-
-            return graph.graph_add_process(process_id, args)
+    def _aggregate_polygon(
+            self, polygon: Union[Polygon, MultiPolygon, str], func: str, name="result", binary=False
+    ) -> dict:
 
         if isinstance(polygon, str):
-            if self._api_version.at_least('0.4.0'):
-                with_read_vector = self.graph_add_process('read_vector', args={
-                    'filename': polygon
-                })
-
-                polygons = {
-                    'from_node': with_read_vector.node_id
-                }
-
-                return graph_add_aggregate_process(with_read_vector)
-            else:
-                raise NotImplementedError("filename requires backend version >=0.4.0")
+            graph = self.graph_add_process(
+                process_id='read_vector',
+                args={'filename': polygon}
+            )
+            polygons = {'from_node': graph.node_id}
         else:
+            graph = self
             polygons = mapping(polygon)
             polygons['crs'] = {
                 'type': 'name',
@@ -896,9 +838,33 @@ class ImageCollectionClient(ImageCollection):
                 }
             }
 
-            return graph_add_aggregate_process(self)
+        process_id = 'aggregate_polygon'
+        args = {
+            'data': {'from_node': self.node_id},
+            'polygons': polygons,
+            'reducer': {
+                'callback': {
+                    "unary": {
+                        "arguments": {
+                            "data": {
+                                "from_argument": "data"
+                            }
+                        },
+                        "process_id": func,
+                        "result": True
+                    }
+                }
+            },
+            'name': name,
+            'binary': binary
+        }
+        return graph.graph_add_process(process_id, args)
 
-    def download(self, outputfile:str, **format_options) -> str:
+    def aggregate_polygon(self, polygons, reducer, name='result', binary=False) -> dict:
+        # TODO
+        pass
+
+    def download(self, outputfile: str, **format_options) -> str:
         """Extraxts a geotiff from this image collection."""
 
         if self._api_version.at_least('0.4.0'):
@@ -909,18 +875,19 @@ class ImageCollectionClient(ImageCollection):
             if 'format' in format_options:
                 args['format'] = format_options.pop('format')
             else:
-                raise ValueError("Please use the 'format' keyword argument to specify the output format. Use openeo.connection.Connection#list_file_types to retrieve available ouput formats for this backend.")
-            newcollection = self.graph_add_process("save_result",args)
+                raise ValueError(
+                    "Please use the 'format' keyword argument to specify the output format. Use openeo.connection.Connection#list_file_types to retrieve available ouput formats for this backend.")
+            newcollection = self.graph_add_process("save_result", args)
             newcollection.graph[newcollection.node_id]["result"] = True
             return self.session.download(newcollection.graph, outputfile, format_options)
         else:
             self.graph[self.node_id]["result"] = True
             return self.session.download(self.graph, outputfile, format_options)
 
-    def tiled_viewing_service(self,**kwargs) -> Dict:
+    def tiled_viewing_service(self, **kwargs) -> Dict:
         newbuilder = self.builder.copy()
         newbuilder.processes[self.node_id]['result'] = True
-        return self.session.create_service(newbuilder.processes,**kwargs)
+        return self.session.create_service(newbuilder.processes, **kwargs)
 
     def send_job(self, out_format=None, **format_options) -> Job:
         """
@@ -951,11 +918,11 @@ class ImageCollectionClient(ImageCollection):
         """Executes the process graph of the imagery. """
         newbuilder = self.builder.copy()
         newbuilder.processes[self.node_id]['result'] = True
-        return self.session.execute({"process_graph": newbuilder.processes},"")
+        return self.session.execute({"process_graph": newbuilder.processes}, "")
 
     ####### HELPER methods #######
 
-    def _graph_merge(self, other_graph:Dict):
+    def _graph_merge(self, other_graph: Dict):
         newbuilder = GraphBuilder(self.builder.processes)
         merged = newbuilder.merge(GraphBuilder(other_graph))
         # TODO: properly update metadata as well?
@@ -970,9 +937,9 @@ class ImageCollectionClient(ImageCollection):
         :param args: Dict, Arguments of the process.
         :return: imagery: Instance of the RestImagery class
         """
-        #don't modify in place, return new builder
+        # don't modify in place, return new builder
         newbuilder = GraphBuilder(self.builder.processes)
-        id = newbuilder.process(process_id,args)
+        id = newbuilder.process(process_id, args)
 
         # TODO: properly update metadata as well?
         newCollection = ImageCollectionClient(id, newbuilder, self.session, metadata=self.metadata)
@@ -986,7 +953,7 @@ class ImageCollectionClient(ImageCollection):
         import graphviz
         import pprint
 
-        graph = graphviz.Digraph(node_attr={"shape": "none", "fontname": "sans", "fontsize": "11"})
+        graph = graphviz.Digraph(node_attr={"shape": "none", "fontname": "sans", "fontsize": "10"})
         for name, process in self.graph.items():
             args = process.get("arguments", {})
             # Build label

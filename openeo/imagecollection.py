@@ -406,6 +406,19 @@ class ImageCollection(ABC):
         """
         pass
 
+    def aggregate_polygon(self, polygons, reducer, name='result', binary=False) -> dict:
+        """
+        Aggregates zonal statistics for one or multiple polygons over the spatial dimensions.
+
+        :param polygons: One or more polygons to calculate zonal statistics for.
+        :param reducer: A reducer to be applied on all values of each geometry.
+        :param name: The property name (for GeoJSON) or the new dimension name (for vector cubes)
+            to be used for storing the results.
+        :param binary: Specifies whether the process should pass two values to the reducer or a list of values
+        :return:
+        """
+
+    # TODO: remove `v
     def zonal_statistics(self, regions, func, scale=1000, interval="day") -> 'Dict':
         """
         Calculates statistics for each zone specified in a file.
@@ -501,5 +514,7 @@ class ImageCollection(ABC):
         :param args: Dict, Arguments of the process.
 
         :return: imagecollection: Instance of the ImageCollection class
+
+        # TODO: does this method belong in base class? Seems client specific.
         """
         pass

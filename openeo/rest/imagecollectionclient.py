@@ -864,6 +864,16 @@ class ImageCollectionClient(ImageCollection):
         # TODO
         pass
 
+    def save_result(self, format: str, options: dict = None):
+        return self.graph_add_process(
+            process_id="save_result",
+            args={
+                "data": {"from_node": self.node_id},
+                "format": format,
+                "options": options
+            }
+        )
+
     def download(self, outputfile: str, **format_options) -> str:
         """Extraxts a geotiff from this image collection."""
 

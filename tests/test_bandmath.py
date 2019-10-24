@@ -17,13 +17,14 @@ class TestBandMath(TestCase):
         session.download = MagicMock()
 
         m.get("http://localhost:8000/api/", json={"version": "0.4.0"})
-        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={"product_id": "sentinel2_subset",
-                                                                                      "bands": [{'band_id': 'B02'},
-                                                                                                {'band_id': 'B04'},
-                                                                                                {'band_id': 'B08'},
-                                                                                                ],
-                                                                                      'time': {'from': '2015-06-23',
-                                                                                               'to': '2018-06-18'}})
+        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={
+            "product_id": "sentinel2_subset",
+            "properties": {
+                "cube:dimensions": {
+                    "spectral": {"type": "bands", "values": ["B02", "B04", "B08"]}
+                },
+            },
+        })
 
         cube = session.imagecollection("SENTINEL2_RADIOMETRY_10M")
         expected_graph = load_json_resource('data/band0.json')
@@ -40,6 +41,9 @@ class TestBandMath(TestCase):
         m.get("http://localhost:8000/api/collections/CGS_SENTINEL2_RADIOMETRY_V102_001", json={
             "id": "CGS_SENTINEL2_RADIOMETRY_V102_001",
             "properties": {
+                "cube:dimensions": {
+                    "spectral": {"type": "bands", "values": ["B02", "B03", "B04", "B08"]}
+                },
                 "eo:bands": [
                     {"name": "B02", "common_name": "blue", "center_wavelength": 0.4966},
                     {"name": "B03", "common_name": "green", "center_wavelength": 0.560},
@@ -64,13 +68,14 @@ class TestBandMath(TestCase):
 
         m.get("http://localhost:8000/api/", json={"version": "0.4.0"})
         m.get("http://localhost:8000/api/collections", json={"collections": [{"product_id": "sentinel2_subset"}]})
-        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={"product_id": "sentinel2_subset",
-                                                                                      "bands": [{'band_id': 'B02'},
-                                                                                                {'band_id': 'B04'},
-                                                                                                {'band_id': 'B08'},
-                                                                                                ],
-                                                                                    })
-
+        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={
+            "product_id": "sentinel2_subset",
+            "properties": {
+                "cube:dimensions": {
+                    "spectral": {"type": "bands", "values": ["B02", "B04", "B08"]}
+                },
+            },
+        })
         # discovery phase: find available data
         # basically user needs to find available data on a website anyway?
         # like the imagecollection ID on: https://earthengine.google.com/datasets/
@@ -100,13 +105,14 @@ class TestBandMath(TestCase):
 
         m.get("http://localhost:8000/api/", json={"version": "0.4.1"})
         m.get("http://localhost:8000/api/collections", json={"collections": [{"product_id": "sentinel2_subset"}]})
-        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={"product_id": "sentinel2_subset",
-                                                                               "bands": [{'band_id': 'B0'},
-                                                                                         {'band_id': 'B1'},
-                                                                                         {'band_id': 'B2'},
-                                                                                         {'band_id': 'B3'}],
-                                                                             })
-
+        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={
+            "product_id": "sentinel2_subset",
+            "properties": {
+                "cube:dimensions": {
+                    "spectral": {"type": "bands", "values": ["B0", "B1", "B2", "B3"]}
+                },
+            },
+        })
         #discovery phase: find available data
         #basically user needs to find available data on a website anyway?
         #like the imagecollection ID on: https://earthengine.google.com/datasets/
@@ -142,7 +148,7 @@ class TestBandMath(TestCase):
                                                   'udf': 'def myfunction(tile): print(tile)',
                                                   'runtime': 'Python',
                                                   'data': {'from_argument': 'data'}}}}},
-                        'dimension': 'spectral_bands', 'binary': False,
+                        'dimension': 'spectral', 'binary': False,
                         'data': {'from_node': 'loadcollection1'}
                     }
                 }
@@ -158,12 +164,14 @@ class TestBandMath(TestCase):
 
         m.get("http://localhost:8000/api/", json={"version": "0.4.0"})
         m.get("http://localhost:8000/api/collections", json={"collections": [{"product_id": "sentinel2_subset"}]})
-        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={"product_id": "sentinel2_subset",
-                                                                               "bands": [{'band_id': 'B0'},
-                                                                                         {'band_id': 'B1'},
-                                                                                         {'band_id': 'B2'},
-                                                                                         {'band_id': 'B3'}],
-                                                                             })
+        m.get("http://localhost:8000/api/collections/SENTINEL2_RADIOMETRY_10M", json={
+            "product_id": "sentinel2_subset",
+            "properties": {
+                "cube:dimensions": {
+                    "spectral": {"type": "bands", "values": ["B0", "B1", "B2", "B3"]}
+                }
+            }
+        })
 
         def check_process_graph(request):
             expected_graph = load_json_resource('data/udf_graph.json')

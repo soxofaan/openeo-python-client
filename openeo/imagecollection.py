@@ -67,6 +67,7 @@ class CollectionMetadata:
         # Try non-standard VITO bands metadata
         # TODO remove support for this legacy non-standard band metadata
         if "bands" in self._metadata:
+            warnings.warn("Falling back on deprecated non-standard toplevel 'bands' metadata.")
             nm_to_um = lambda nm: nm / 1000. if nm is not None else None
             return [self.Band(b["band_id"], b.get("name"), nm_to_um(b.get("wavelength_nm")))
                     for b in self._metadata["bands"]]
@@ -78,6 +79,18 @@ class CollectionMetadata:
     @property
     def band_common_names(self) -> List[str]:
         return [b.common_name for b in self.bands]
+
+    @property
+    def bands_dimension(self) -> str:
+        """Get name of the 'spectral bands' dimension."""
+        cube_dimensions = self.get('properties', 'cube:dimensions', default={})
+        band_dims = [k for k, v in cube_dimensions.items() if v.get("type") == "bands"]
+        # TODO: Does the spec require exactly/at most/at least one bands dimension? (https://github.com/Open-EO/openeo-api/issues/208)
+        if len(band_dims) != 1:
+            raise ValueError("Expecting one 'bands' dimension, but found {c}: {b!r}".format(
+                c=len(band_dims), b=band_dims
+            ))
+        return band_dims[0]
 
 
 class ImageCollection(ABC):

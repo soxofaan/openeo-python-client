@@ -374,6 +374,7 @@ class Connection(RestApiConnection):
         :param format_options: formating options
         :return: job_id: String
         """
+        # TODO avoid duplication with ImageCollectionClient?
         path = "/preview"
         request = {
             "process_graph": graph

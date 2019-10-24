@@ -22,8 +22,9 @@ class ImageCollectionClient(ImageCollection):
     def __init__(self, node_id: str, builder: GraphBuilder, session: 'Connection', metadata: CollectionMetadata=None):
         super().__init__(metadata=metadata)
         self.node_id = node_id
-        self.builder= builder
         self.session = session
+        # TODO: `.builder` and `.graph` are very tightly linked. Just keep `.builder` and do '.graph` with @property?
+        self.builder= builder
         self.graph = builder.processes
         self.metadata = metadata
 
@@ -143,7 +144,7 @@ class ImageCollectionClient(ImageCollection):
 
         args = {
             'data': {'from_node': self.node_id},
-            'dimension': 'spectral_bands',
+            'dimension': self.metadata.bands_dimension,
             'reducer': {
                 'callback': {
                     'r1': {
@@ -306,7 +307,7 @@ class ImageCollectionClient(ImageCollection):
             # there was no previous reduce step
             args = {
                 'data': {'from_node': self.node_id},
-                'dimension': 'spectral_bands',
+                'dimension': self.metadata.bands_dimension,
                 'reducer': {
                     'callback': callback_graph_builder.processes
                 }
@@ -388,6 +389,7 @@ class ImageCollectionClient(ImageCollection):
             new_builder.processes[node_id]['arguments']['reducer']['callback'] = merged.processes
             # now current_node should be a reduce node, let's modify it
             # TODO: set metadata of reduced cube?
+            # TODO: check compatibitily of metadata: same number of bands, same number of dimensions,
             return ImageCollectionClient(node_id, new_builder, reducing_graph.session)
         
     def _reduce_bands_binary_xy(self,operator,other:Union[ImageCollection,Union[int,float]]):
@@ -436,10 +438,10 @@ class ImageCollectionClient(ImageCollection):
     def _get_band_graph_builder(self):
         current_node = self.graph[self.node_id]
         if current_node["process_id"] == "reduce":
-            if current_node["arguments"]["dimension"] == "spectral_bands":
+            if current_node["arguments"]["dimension"] == self.metadata.bands_dimension:
                 callback_graph = current_node["arguments"]["reducer"]["callback"]
                 return GraphBuilder(graph=callback_graph)
-        return None
+        # TODO: What else? Raise exception?
 
     def zonal_statistics(self, regions, func, scale=1000, interval="day") -> 'ImageCollection':
         """Calculates statistics for each zone specified in a file.
@@ -538,7 +540,7 @@ class ImageCollectionClient(ImageCollection):
                 'data': {
                     'from_node': self.node_id
                 },
-                'dimension': 'spectral_bands',#TODO determine dimension based on datacube metadata
+                'dimension': self.metadata.bands_dimension,
                 'binary': False,
                 'reducer': {
                     'callback': {

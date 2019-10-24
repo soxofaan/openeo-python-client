@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 
 class GraphBuilder():
@@ -17,6 +17,7 @@ class GraphBuilder():
             self._merge_processes(graph)
 
     def copy(self):
+        # TODO do deep copy instead of sharing the process graph?
         return GraphBuilder(self.processes)
 
     def add_process(self,process_id,result=None, **args):
@@ -131,3 +132,7 @@ class GraphBuilder():
 
         merged.add_process(operator, result=True, **args)
         return merged
+
+    def get_by_process_id(self, process_id: str) -> List[dict]:
+        """Extract all process graph nodes with given process id"""
+        return [node for node in self.processes.values() if node["process_id"] == process_id]

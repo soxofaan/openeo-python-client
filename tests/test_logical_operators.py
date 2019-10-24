@@ -20,7 +20,11 @@ class TestLogicalOps(TestCase):
         m.get("http://localhost:8000/api/collections", json={"collections": [{"product_id": "sentinel2_subset"}]})
         m.get("http://localhost:8000/api/collections/SENTINEL2_SCF", json={
             "product_id": "sentinel2_subset",
-            "bands": [{'band_id': 'SCENECLASSIFICATION'}],
+            "properties": {
+                "cube:dimensions": {
+                    "layer": {"type": "bands", "values": ["SCENECLASSIFICATION"]}
+                },
+            },
         })
 
         # discovery phase: find available data
@@ -50,7 +54,11 @@ class TestLogicalOps(TestCase):
         m.get("http://localhost:8000/api/collections", json={"collections": [{"product_id": "sentinel2_subset"}]})
         m.get("http://localhost:8000/api/collections/SENTINEL2_SCF", json={
             "product_id": "sentinel2_subset",
-            "bands": [{'band_id': 'SCENECLASSIFICATION'}],
+            "properties": {
+                "cube:dimensions": {
+                    "layer": {"type": "bands", "values": ["SCENECLASSIFICATION"]}
+                },
+            },
         })
 
         ic = session.imagecollection("SENTINEL2_SCF")
@@ -61,7 +69,7 @@ class TestLogicalOps(TestCase):
         mask.download("out.geotiff", format="GTIFF")
         session.download.assert_called_once()
         actual_graph = session.download.call_args_list[0][0][0]
-        expected_graph = load_json_resource('logical_or.json')
+        expected_graph = load_json_resource('data/logical_or.json')
         assert actual_graph == expected_graph
 
     def test_and(self, m):
@@ -73,7 +81,11 @@ class TestLogicalOps(TestCase):
         m.get("http://localhost:8000/api/collections", json={"collections": [{"product_id": "sentinel2_subset"}]})
         m.get("http://localhost:8000/api/collections/SENTINEL2_SCF", json={
             "product_id": "sentinel2_subset",
-            "bands": [{'band_id': 'B1'}, {'band_id': 'B2'}],
+            "properties": {
+                "cube:dimensions": {
+                    "spectral": {"type": "bands", "values": ["B1", "B2"]}
+                },
+            },
         })
 
         ic = session.imagecollection("SENTINEL2_SCF")
@@ -84,5 +96,5 @@ class TestLogicalOps(TestCase):
         mask.download("out.geotiff", format="GTIFF")
         session.download.assert_called_once()
         actual_graph = session.download.call_args_list[0][0][0]
-        expected_graph = load_json_resource('logical_and.json')
+        expected_graph = load_json_resource('data/logical_and.json')
         assert actual_graph == expected_graph

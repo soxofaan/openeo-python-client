@@ -6,9 +6,11 @@ import typing
 import urllib.request
 from typing import List, Union
 
+import requests
+from requests import ConnectionError
+
 from openeo.job import Job, JobResult
 from openeo.rest import OpenEoClientException
-from requests import ConnectionError
 
 if hasattr(typing, 'TYPE_CHECKING') and typing.TYPE_CHECKING:
     # Only import this for type hinting purposes. Runtime import causes circular dependency issues.
@@ -79,7 +81,7 @@ class RESTJob(Job):
         # GET /jobs/{job_id}/results
         pass
 
-    def download_results(self, target: Union[str, pathlib.Path]) -> pathlib.Path:
+    def download_results(self, target: Union[str, pathlib.Path], attempts: int = 5) -> pathlib.Path:
         """ Download job results."""
         results_url = "/jobs/{}/results".format(self.job_id)
         r = self.connection.get(results_url, expected_status=200)
@@ -90,13 +92,21 @@ class RESTJob(Job):
         file_url = links[0]["href"]
 
         target = pathlib.Path(target)
-        with target.open('wb') as handle:
-            response = self.connection.get(file_url, stream=True)
-            for block in response.iter_content(1024):
-                if not block:
-                    break
-                handle.write(block)
-        return target
+        for attempt in range(1, attempts + 1):
+            try:
+                with target.open('wb') as handle:
+                    response = self.connection.get(file_url, stream=True)
+                    for block in response.iter_content(1024):
+                        if not block:
+                            break
+                        handle.write(block)
+                return target
+            except requests.exceptions.RequestException as e:
+                logger.error("Attempt #{a} to download {t} failed: {e}".format(a=attempt, t=target, e=e), exc_info=True)
+                if attempt < attempts - 1:
+                    time.sleep(5)
+        else:
+            raise RuntimeError("Failed to download {t} in {a} attempts".format(t=target, a=attempts))
 
     # TODO: All below methods are deprecated (at least not specified in the coreAPI)
     def download(self, outputfile: str, outputformat=None):

@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from openeo.util import first_not_none, get_temporal_extent, TimingLogger, ensure_list, ensure_dir
+from openeo.util import first_not_none, get_temporal_extent, TimingLogger, ensure_list, ensure_dir, retry
 
 
 @pytest.mark.parametrize(['input', 'expected'], [
@@ -138,3 +138,11 @@ def test_timing_logger_fail():
         "Testing: start 2019-12-12 10:10:10.010000",
         "Testing: fail 2019-12-12 11:12:13.014141, elapsed 1:02:03.004141"
     ]
+
+
+def test_retry_no_fail():
+    @retry()
+    def foo(x):
+        return x + 1
+
+    assert foo(5) == 6

@@ -155,7 +155,7 @@ def retry(attempts: int = 5, delay: float = 5, backoff: float = 1, exception_cla
     """
 
     def decorator(f):
-        @functools.wraps()
+        @functools.wraps(f)
         def wrapped(*args, **kwargs):
             nonlocal delay
             for attempt in range(1, attempts + 1):

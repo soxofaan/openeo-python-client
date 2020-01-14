@@ -11,6 +11,7 @@ from requests import ConnectionError
 
 from openeo.job import Job, JobResult
 from openeo.rest import OpenEoClientException
+from openeo.util import retry
 
 if hasattr(typing, 'TYPE_CHECKING') and typing.TYPE_CHECKING:
     # Only import this for type hinting purposes. Runtime import causes circular dependency issues.
@@ -92,21 +93,18 @@ class RESTJob(Job):
         file_url = links[0]["href"]
 
         target = pathlib.Path(target)
-        for attempt in range(1, attempts + 1):
-            try:
-                with target.open('wb') as handle:
-                    response = self.connection.get(file_url, stream=True)
-                    for block in response.iter_content(1024):
-                        if not block:
-                            break
-                        handle.write(block)
-                return target
-            except requests.exceptions.RequestException as e:
-                logger.error("Attempt #{a} to download {t} failed: {e}".format(a=attempt, t=target, e=e), exc_info=True)
-                if attempt < attempts - 1:
-                    time.sleep(5)
-        else:
-            raise RuntimeError("Failed to download {t} in {a} attempts".format(t=target, a=attempts))
+
+        @retry(attempts=5, backoff=1.2, exception_class=requests.exceptions.RequestException)
+        def download():
+            with target.open('wb') as handle:
+                response = self.connection.get(file_url, stream=True)
+                for block in response.iter_content(1024):
+                    if not block:
+                        break
+                    handle.write(block)
+            return target
+
+        return download()
 
     # TODO: All below methods are deprecated (at least not specified in the coreAPI)
     def download(self, outputfile: str, outputformat=None):

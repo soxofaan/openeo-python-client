@@ -1,8 +1,10 @@
 """
 Various utilities and helpers.
 """
+import functools
 import logging
 import re
+import time
 from datetime import datetime, date
 from typing import Any, Union, Tuple, Callable
 from pathlib import Path
@@ -137,3 +139,40 @@ class TimingLogger:
             s="fail" if exc_type else "end",
             e=self.end_time, d=self.elapsed
         ))
+
+
+def retry(attempts: int = 5, delay: float = 5, backoff: float = 1, exception_class: type = Exception,
+          log: Callable = logger.warning):
+    """
+    Decorator for functions to be retried a couple of times when they fail
+
+    :param attempts: number of attempts
+    :param delay: initial delay in seconds to wait between attempts
+    :param backoff: multiplicator to increase the delay with each attempt
+    :param exception_class: class of exception to catch (or tuple of multiple Exception classes)
+    :param log: optional print/logging callable to use when an attempt failed
+    :return:
+    """
+
+    def decorator(f):
+        @functools.wraps()
+        def wrapped(*args, **kwargs):
+            nonlocal delay
+            for attempt in range(1, attempts + 1):
+                try:
+                    return f(*args, **kwargs)
+                except exception_class as e:
+                    if attempt < attempts:
+                        if log:
+                            log("Attempt {a} of calling {f} failed: {e}. Retrying in {s} seconds.".format(
+                                a=attempt, f=f, e=e, s=delay
+                            ))
+                        time.sleep(delay)
+                        delay = backoff * delay
+                    else:
+                        raise
+
+        return wrapped
+
+    return decorator
+

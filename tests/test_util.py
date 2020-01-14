@@ -2,6 +2,7 @@ import logging
 import os
 import pathlib
 import re
+import unittest.mock as mock
 from datetime import datetime
 
 import pytest
@@ -146,3 +147,33 @@ def test_retry_no_fail():
         return x + 1
 
     assert foo(5) == 6
+
+
+def test_retry_some_fails():
+    success = [False, False, True]
+    sleep = mock.MagicMock()
+
+    @retry(attempts=3, sleep=sleep)
+    def foo(x):
+        nonlocal success
+        if not success.pop(0):
+            raise RuntimeError
+        return x + 1
+
+    assert foo(5) == 6
+    assert sleep.call_count == 2
+
+
+def test_retry_all_fails():
+    success = [False, False, False]
+    sleep = mock.MagicMock()
+
+    @retry(attempts=3, sleep=sleep)
+    def foo(x):
+        nonlocal success
+        if not success.pop(0):
+            raise RuntimeError
+        return x + 1
+
+    with pytest.raises(RuntimeError):
+        foo(4)

@@ -142,7 +142,7 @@ class TimingLogger:
 
 
 def retry(attempts: int = 5, delay: float = 5, backoff: float = 1, exception_class: type = Exception,
-          log: Callable = logger.warning):
+          log: Callable = logger.warning, sleep=time.sleep):
     """
     Decorator for functions to be retried a couple of times when they fail
 
@@ -164,10 +164,10 @@ def retry(attempts: int = 5, delay: float = 5, backoff: float = 1, exception_cla
                 except exception_class as e:
                     if attempt < attempts:
                         if log:
-                            log("Attempt {a} of calling {f} failed: {e}. Retrying in {s} seconds.".format(
+                            log("Attempt {a} of calling {f} failed: {e}. Retrying in {s:.1f} seconds.".format(
                                 a=attempt, f=f, e=e, s=delay
                             ))
-                        time.sleep(delay)
+                        sleep(delay)
                         delay = backoff * delay
                     else:
                         raise

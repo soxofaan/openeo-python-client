@@ -24,10 +24,15 @@ from ... import load_json_resource
 
 
 def test_apply_dimension_temporal_cumsum(s2cube, api_version):
-    cumsum = s2cube.apply_dimension('cumsum')
+    cumsum = s2cube.apply_dimension('cumsum', dimension="t")
     actual_graph = get_download_graph(cumsum)
     expected_graph = load_json_resource('data/{v}/apply_dimension_temporal_cumsum.json'.format(v=api_version))
     assert actual_graph == expected_graph
+
+
+def test_apply_dimension_invalid_dimension(s2cube):
+    with pytest.raises(ValueError, match="Invalid dimension"):
+        s2cube.apply_dimension('cumsum', dimension="olapola")
 
 
 def test_min_time(s2cube, api_version):
@@ -266,7 +271,7 @@ def test_max_time(s2cube, api_version):
     graph = _get_leaf_node(im, force_flat=True)
     assert graph["process_id"] == "reduce" if api_version == '0.4.0' else 'reduce_dimension'
     assert graph["arguments"]["data"] == {'from_node': 'loadcollection1'}
-    assert graph["arguments"]["dimension"] == "temporal"
+    assert graph["arguments"]["dimension"] == "t"
     if api_version == '0.4.0':
         callback = graph["arguments"]["reducer"]["callback"]["r1"]
         assert callback == {'arguments': {'data': {'from_argument': 'data'}}, 'process_id': 'max', 'result': True}
